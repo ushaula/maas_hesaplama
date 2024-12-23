@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beko Maaş Hesaplama</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 800px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .inline-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        .inline-inputs label {
+            margin-bottom: 0;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beko Maaş Hesaplama</h1>
+        <div class="inline-inputs">
+            <div>
+				<label for="year">Yıl </label>
+				<select id="year">
+					<option value="2024">2024</option>
+					<option value="2025">2025</option>
+				</select>
+            </div>
+            <div>
+                <label for="besOption">Bireysel Emeklilik</label>
+                <select id="besOption">
+                    <option value="var">Var</option>
+                    <option value="yok">Yok</option>
+                </select>
+            </div>
+        </div>
+        <label for="grossSalary">Beko Brüt Maaşı (TL):</label>
+        <input type="number" id="grossSalary" placeholder="Maaş mektubundaki miktarı giriniz">
+        <label for="ikramiyeKatsayi">Yıl Sonu Prim Katsayısı:</label>
+        <input type="number" id="ikramiyeKatsayi" placeholder="Katsayıyı giriniz">
+        <button onclick="calculateYearlyNetSalaries()">Hesapla</button>
+        <div class="result" id="result"></div>
+        <table id="salaryTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Ay</th>
+                    <th>Net Maaş</th>
+                    <th>Koç Emeklilik</th>
+                    <th>BES</th>
+                    <th>Ödenen Net</th>
+                    <th>ArGe İade (yaklaşık)</th>
+                </tr>
+            </thead>
+            <tbody id="salaryTableBody"></tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td>Toplam</td>
+                    <td id="totalNet"></td>
+                    <td id="totalVakif"></td>
+                    <td id="totalBes"></td>
+                    <td id="totalNetOdeme"></td>
+                    <td id="totalRdPayback"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <script>
+        function calculateYearlyNetSalaries() {
+            const bekoGrossSalary = parseFloat(document.getElementById('grossSalary').value);
+            const primCarpaniTemp = parseFloat(document.getElementById('ikramiyeKatsayi').value);
+            const selectedYear = document.getElementById('year').value;
+            const besStatus = document.getElementById('besOption').value;
+			const asgariUcret = 20002.5;
+			let grossSalary = bekoGrossSalary * 4 / 3;
+			let primCarpani = 0.0;
+
+            if (isNaN(grossSalary) || grossSalary < asgariUcret) {
+                document.getElementById('result').textContent = "Lütfen geçerli bir brüt maaş giriniz.";
+                return;
+            }
+			
+			if (!isNaN(primCarpaniTemp)) {
+				primCarpani = primCarpaniTemp;
+			}
+
+			const tssPrice = 474;
+			const ossPrice = 834.4375;
+            // Sabit kesinti oranları
+            const sgkKesintiOrani = 0.14; // SGK İşçi Primi
+			const sgkTavani = asgariUcret * 7.5;
+            const issizlikSigortasiOrani = 0.01; // İşsizlik Sigortası
+            const damgaVergisiOrani = 0.00759; // Damga Vergisi
+			const besKatsayi = besStatus === "var" ? 0.03 : 0;
+
+            // Gelir vergisi dilimleri
+            const gelirVergisiDilimleri2024 = [
+                { limit: 110000, rate: 0.15 },
+                { limit: 230000, rate: 0.20 },
+                { limit: 870000, rate: 0.27 },
+                { limit: 3000000, rate: 0.35 },
+                { limit: Infinity, rate: 0.40 }
+            ];
+
+            const gelirVergisiDilimleri2025 = [
+                { limit: 180000, rate: 0.15 },
+                { limit: 300000, rate: 0.20 },
+                { limit: 1200000, rate: 0.27 },
+                { limit: 5000000, rate: 0.35 },
+                { limit: Infinity, rate: 0.40 }
+            ];
+
+            const gelirVergisiDilimleri = selectedYear === "2024" ? gelirVergisiDilimleri2024 : gelirVergisiDilimleri2025;
+
+            // Kesintiler ve net maaş hesaplama
+            let toplamMatrah = 0;
+			let asgariToplamMatrah = 0;
+            let totalNet = 0;
+            let totalVakif = 0;
+            let totalBes = 0;
+            let totalNetOdeme = 0;
+			let totalRdPayback = 0;
+			let oncekiKumuleGelirVergisi = 0.0;
+			let oncekiAsgariKumuleGelirVergisi = 0.0;
+
+            const salaryTable = document.getElementById('salaryTable');
+            const salaryTableBody = document.getElementById('salaryTableBody');
+            salaryTableBody.innerHTML = ""; // Önce tabloyu temizle
+
+            for (let ay = 1; ay <= 12; ay++) {
+				if (ay == 12) {
+					grossSalary += bekoGrossSalary * primCarpani;
+				}
+				const sgkTabiUcret = grossSalary < sgkTavani ? grossSalary : sgkTavani; // devreden bakiyeyi eklemeliyim.
+				const sgkKesintisi = sgkTabiUcret * sgkKesintiOrani;
+				const issizlikKesintisi = sgkTabiUcret * issizlikSigortasiOrani;
+				const damgaVergisi = (grossSalary - asgariUcret) * damgaVergisiOrani;
+				const kocEmeklilikKesintisi = bekoGrossSalary * 0.06;
+				const besKesintisi = sgkTabiUcret * besKatsayi;
+
+				const aylikGelirVergisiMatrahi = grossSalary - (sgkKesintisi + issizlikKesintisi) + damgaVergisiOrani * tssPrice; // ekstra tss varsa çıkarmalıyız.
+				
+                toplamMatrah += aylikGelirVergisiMatrahi;
+
+                let kalanGelir = toplamMatrah;
+                let kumuleGelirVergisi = 0.0;
+
+                for (let i = 0; i < gelirVergisiDilimleri.length; i++) {
+                    const { limit, rate } = gelirVergisiDilimleri[i];
+                    const oncekiLimit = i > 0 ? gelirVergisiDilimleri[i - 1].limit : 0;
+
+                    if (kalanGelir > 0) {
+                        const dilimGeliri = Math.min(kalanGelir, limit - oncekiLimit);
+                        kumuleGelirVergisi += dilimGeliri * rate;
+                        kalanGelir -= dilimGeliri;
+                    } else {
+                        break;
+                    }
+                }
+				
+				asgariToplamMatrah = ay * asgariUcret * (1 - (sgkKesintiOrani + issizlikSigortasiOrani));
+				kalanGelir = asgariToplamMatrah;
+				let kumuleAsgariGelirVergisi = 0.0;
+				
+                for (let i = 0; i < gelirVergisiDilimleri.length; i++) {
+                    const { limit, rate } = gelirVergisiDilimleri[i];
+                    const oncekiLimit = i > 0 ? gelirVergisiDilimleri[i - 1].limit : 0;
+
+                    if (kalanGelir > 0) {
+                        const dilimGeliri = Math.min(kalanGelir, limit - oncekiLimit);
+                        kumuleAsgariGelirVergisi += dilimGeliri * rate;
+                        kalanGelir -= dilimGeliri;
+                    } else {
+                        break;
+                    }
+                }
+
+                const netSalary = grossSalary - (sgkKesintisi + issizlikKesintisi + (kumuleGelirVergisi - oncekiKumuleGelirVergisi) - (kumuleAsgariGelirVergisi - oncekiAsgariKumuleGelirVergisi) + damgaVergisi);
+				const netOdeme = netSalary - (kocEmeklilikKesintisi + besKesintisi) // ilave tss'yi dusmek gerekiyor.
+				
+				let aylikGelirVergisi = kumuleGelirVergisi - oncekiKumuleGelirVergisi;
+				oncekiKumuleGelirVergisi = kumuleGelirVergisi;
+				oncekiAsgariKumuleGelirVergisi = kumuleAsgariGelirVergisi;
+
+                totalNet += netSalary;
+                totalVakif += kocEmeklilikKesintisi;
+                totalBes += besKesintisi;
+                totalNetOdeme += netOdeme;
+				totalRdPayback += damgaVergisi
+
+                const row = document.createElement('tr');
+                const monthCell = document.createElement('td');
+                const netSalaryCell = document.createElement('td');
+                const vakifCell = document.createElement('td');
+                const besCell = document.createElement('td');
+                const netPayCell = document.createElement('td');
+                const rdPaybackCell = document.createElement('td');
+
+                monthCell.textContent = `${ay}. Ay`;
+                netSalaryCell.textContent = `${netSalary.toFixed(2)}`;
+                vakifCell.textContent = `${kocEmeklilikKesintisi.toFixed(2)}`;
+                besCell.textContent = `${besKesintisi.toFixed(2)}`;
+                netPayCell.textContent = `${netOdeme.toFixed(2)}`;
+                rdPaybackCell.textContent = `+ ${damgaVergisi.toFixed(2)}`;
+
+                row.appendChild(monthCell);
+                row.appendChild(netSalaryCell);
+                row.appendChild(vakifCell);
+                row.appendChild(besCell);
+                row.appendChild(netPayCell);
+                row.appendChild(rdPaybackCell);
+                salaryTableBody.appendChild(row);
+            }
+
+            document.getElementById('totalNet').textContent = `${totalNet.toFixed(2)}`;
+            document.getElementById('totalVakif').textContent = `${totalVakif.toFixed(2)}`;
+            document.getElementById('totalBes').textContent = `${totalBes.toFixed(2)}`;
+            document.getElementById('totalNetOdeme').textContent = `${totalNetOdeme.toFixed(2)}`;
+            document.getElementById('totalRdPayback').textContent = `+ ${totalRdPayback.toFixed(2)}`;
+
+            salaryTable.style.display = "table";
+            document.getElementById('result').innerHTML = "Tablo oluşturuldu.";
+			
+			// TODO List:
+			// 1- Devreden bakiye.
+			// 2- TSS/OSS seçtirme ve bunların işlenmesi.
+        }
+    </script>
+</body>
+</html>
