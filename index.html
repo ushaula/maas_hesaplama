@@ -141,9 +141,12 @@
             const primCarpaniTemp = parseFloat(document.getElementById('ikramiyeKatsayi').value);
             const selectedYear = document.getElementById('year').value;
             const besStatus = document.getElementById('besOption').value;
-			const asgariUcret = 20002.5;
+			const asgariUcret2024 = 20002.5;
+			const asgariUcret2025 = 26005.5;
 			let grossSalary = bekoGrossSalary * 4 / 3;
 			let primCarpani = 0.0;
+			
+            const asgariUcret = selectedYear === "2024" ? asgariUcret2024 : asgariUcret2025;
 
             if (isNaN(grossSalary) || grossSalary < asgariUcret) {
                 document.getElementById('result').textContent = "Lütfen geçerli bir brüt maaş giriniz.";
@@ -173,10 +176,10 @@
             ];
 
             const gelirVergisiDilimleri2025 = [
-                { limit: 180000, rate: 0.15 },
-                { limit: 300000, rate: 0.20 },
+                { limit: 158000, rate: 0.15 },
+                { limit: 330000, rate: 0.20 },
                 { limit: 1200000, rate: 0.27 },
-                { limit: 5000000, rate: 0.35 },
+                { limit: 4300000, rate: 0.35 },
                 { limit: Infinity, rate: 0.40 }
             ];
 
