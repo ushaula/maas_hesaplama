@@ -103,6 +103,24 @@
                     <option value="yok">Yok</option>
                 </select>
             </div>
+            <div>
+                <label for="sigortaTipi">Sağlık Sigortası</label>
+                <select id="sigortaTipi">
+                    <option value="tss">Tamamlayıcı</option>
+                    <option value="oss">Özel</option>
+                </select>
+            </div>
+            <div>
+                <label for="sigortaSayısı">Sigortalı sayısı</label>
+                <select id="sigortaSayısı">
+                    <option value=1>1</option>
+                    <option value=2>2</option>
+                    <option value=3>3</option>
+                    <option value=4>4</option>
+                    <option value=5>5</option>
+                    <option value=6>6</option>
+                </select>
+            </div>
         </div>
         <label for="grossSalary">Beko Brüt Maaşı (TL):</label>
         <input type="number" id="grossSalary" placeholder="Maaş mektubundaki miktarı giriniz">
@@ -119,6 +137,7 @@
                     <th>Net Maaş</th>
                     <th>Koç Emeklilik</th>
                     <th>BES</th>
+                    <th>Sağlık Sigortası</th>
                     <th>Ödenen Net</th>
                     <th>ArGe İade (yaklaşık)</th>
                 </tr>
@@ -130,6 +149,7 @@
                     <td id="totalNet"></td>
                     <td id="totalVakif"></td>
                     <td id="totalBes"></td>
+                    <td id="totalSS"></td>
                     <td id="totalNetOdeme"></td>
                     <td id="totalRdPayback"></td>
                 </tr>
@@ -144,6 +164,8 @@
             const primCarpaniTemp = parseFloat(document.getElementById('ikramiyeKatsayi').value);
             const selectedYear = document.getElementById('year').value;
             const besStatus = document.getElementById('besOption').value;
+			const ssTipi = document.getElementById('sigortaTipi').value;
+			const ssSayisi = document.getElementById('sigortaSayısı').value;
 			const asgariUcret2023H2 = 13414.5;
 			const asgariUcret2024 = 20002.5;
 			const asgariUcret2025 = 26005.5;
@@ -171,6 +193,13 @@
             const issizlikSigortasiOrani = 0.01; // İşsizlik Sigortası
             const damgaVergisiOrani = 0.00759; // Damga Vergisi
 			const besKatsayi = besStatus === "var" ? 0.03 : 0;
+            let saglikSigortasi = 0
+            if (ssTipi == "tss"){
+                saglikSigortasi = (ssSayisi - 1)*tssPrice
+            }
+            else {
+                saglikSigortasi = (ssSayisi > 2 ? (ssSayisi - 2)*ossPrice*0.4 + 2*ossPrice : ssSayisi*ossPrice) - tssPrice;
+            }
 
             // Gelir vergisi dilimleri
             const gelirVergisiDilimleri2024 = [
@@ -197,6 +226,7 @@
             let totalNet = 0;
             let totalVakif = 0;
             let totalBes = 0;
+            let totalSS = 0;
             let totalNetOdeme = 0;
 			let totalRdPayback = 0;
 			let oncekiKumuleGelirVergisi = 0.0;
@@ -240,11 +270,11 @@
 
 				const sgkKesintisi = sgkTabiUcret * sgkKesintiOrani;
 				const issizlikKesintisi = sgkTabiUcret * issizlikSigortasiOrani;
-				const damgaVergisi = (grossSalary - asgariUcret) * damgaVergisiOrani;
+				const damgaVergisi = (grossSalary + tssPrice - asgariUcret) * damgaVergisiOrani;
 				const kocEmeklilikKesintisi = bekoGrossSalary * 0.06;
 				const besKesintisi = sgkTabiUcret * besKatsayi;
 
-				const aylikGelirVergisiMatrahi = grossSalary - (sgkKesintisi + issizlikKesintisi) + damgaVergisiOrani * tssPrice; // ekstra tss varsa çıkarmalıyız.
+				const aylikGelirVergisiMatrahi = grossSalary - (sgkKesintisi + issizlikKesintisi) + damgaVergisiOrani * tssPrice - saglikSigortasi; // ekstra tss varsa çıkarmalıyız.
 				
                 toplamMatrah += aylikGelirVergisiMatrahi;
 
@@ -281,8 +311,8 @@
                     }
                 }
 
-                const netSalary = grossSalary - (sgkKesintisi + issizlikKesintisi + (kumuleGelirVergisi - oncekiKumuleGelirVergisi) - (kumuleAsgariGelirVergisi - oncekiAsgariKumuleGelirVergisi) + damgaVergisi);
-				const netOdeme = netSalary - (kocEmeklilikKesintisi + besKesintisi) // ilave tss'yi dusmek gerekiyor.
+                const netSalary = grossSalary - (sgkKesintisi + issizlikKesintisi + (kumuleGelirVergisi - oncekiKumuleGelirVergisi) - (kumuleAsgariGelirVergisi - oncekiAsgariKumuleGelirVergisi) + damgaVergisi) + damgaVergisiOrani * tssPrice;
+				const netOdeme = netSalary - (kocEmeklilikKesintisi + besKesintisi + saglikSigortasi) // ilave tss'yi dusmek gerekiyor.
 				
 				let aylikGelirVergisi = kumuleGelirVergisi - oncekiKumuleGelirVergisi;
 				oncekiKumuleGelirVergisi = kumuleGelirVergisi;
@@ -291,6 +321,7 @@
                 totalNet += netSalary;
                 totalVakif += kocEmeklilikKesintisi;
                 totalBes += besKesintisi;
+                totalSS += saglikSigortasi;
                 totalNetOdeme += netOdeme;
 				totalRdPayback += damgaVergisi
 
@@ -299,6 +330,7 @@
                 const netSalaryCell = document.createElement('td');
                 const vakifCell = document.createElement('td');
                 const besCell = document.createElement('td');
+                const ssCell = document.createElement('td');
                 const netPayCell = document.createElement('td');
                 const rdPaybackCell = document.createElement('td');
 
@@ -306,6 +338,7 @@
                 netSalaryCell.textContent = `${netSalary.toFixed(2)}`;
                 vakifCell.textContent = `${kocEmeklilikKesintisi.toFixed(2)}`;
                 besCell.textContent = `${besKesintisi.toFixed(2)}`;
+                ssCell.textContent = `${saglikSigortasi.toFixed(2)}`;
                 netPayCell.textContent = `${netOdeme.toFixed(2)}`;
                 rdPaybackCell.textContent = `+ ${damgaVergisi.toFixed(2)}`;
 
@@ -313,16 +346,18 @@
                 row.appendChild(netSalaryCell);
                 row.appendChild(vakifCell);
                 row.appendChild(besCell);
+                row.appendChild(ssCell);
                 row.appendChild(netPayCell);
                 row.appendChild(rdPaybackCell);
                 salaryTableBody.appendChild(row);
             }
 
-            document.getElementById('totalNet').textContent = `${totalNet.toFixed(2)}`;
-            document.getElementById('totalVakif').textContent = `${totalVakif.toFixed(2)}`;
-            document.getElementById('totalBes').textContent = `${totalBes.toFixed(2)}`;
-            document.getElementById('totalNetOdeme').textContent = `${totalNetOdeme.toFixed(2)}`;
-            document.getElementById('totalRdPayback').textContent = `+ ${totalRdPayback.toFixed(2)}`;
+            document.getElementById('totalNet').textContent = `${totalNet.toFixed(0)}`;
+            document.getElementById('totalVakif').textContent = `${totalVakif.toFixed(0)}`;
+            document.getElementById('totalBes').textContent = `${totalBes.toFixed(0)}`;
+            document.getElementById('totalSS').textContent = `${totalSS.toFixed(0)}`;
+            document.getElementById('totalNetOdeme').textContent = `${totalNetOdeme.toFixed(0)}`;
+            document.getElementById('totalRdPayback').textContent = `+ ${totalRdPayback.toFixed(0)}`;
 
             salaryTable.style.display = "table";
             document.getElementById('result').innerHTML = "Tablo oluşturuldu.";
