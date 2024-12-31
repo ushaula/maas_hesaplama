@@ -11,8 +11,8 @@
             padding: 0;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
+            align-items: top;
+            height: 140vh;
             background-color: #f4f4f4;
         }
         .container {
@@ -23,7 +23,7 @@
             width: 800px;
         }
         h1 {
-            font-size: 1.5rem;
+            font-size: 2rem;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -35,7 +35,7 @@
         select, input {
             width: 100%;
             padding: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
@@ -44,6 +44,7 @@
             gap: 10px;
         }
         .inline-inputs label {
+            margin-right: 10px;
             margin-bottom: 0;
         }
         button {
@@ -122,6 +123,10 @@
                 </select>
             </div>
         </div>
+        <div>
+            <p style="font-size: 0.8rem; color: #666;">*Buradaki hesaplamaların resmi bir geçerliliği yoktur. Sadece referans amaçlıdır.</p>
+            <p style="font-size: 0.8rem; color: #666;">**2025 sağlık sigortası tutarları henüz belli olmadığı için 2024'e göre %45 artışlı olarak hesaba dahil ettim</p>
+        </div>
         <label for="grossSalary">Beko Brüt Maaşı (TL):</label>
         <input type="number" id="grossSalary" placeholder="Maaş mektubundaki miktarı giriniz">
         <label for="lastGrossSalary">İkramiyeler Dahil Son Yılın Aralık Brüt Maaşı (Devreden Matrah İçin):</label>
@@ -155,6 +160,7 @@
                 </tr>
             </tfoot>
         </table>
+        <button onclick="location.href='mailto:umit.shahin@hotmail.com?subject=Beko Maas Hesaplama';" style="margin-top: 15px; background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Geri Bildirim Gönder</button>
     </div>
 
     <script>
@@ -169,6 +175,10 @@
 			const asgariUcret2023H2 = 13414.5;
 			const asgariUcret2024 = 20002.5;
 			const asgariUcret2025 = 26005.5;
+            const tss2024 = 474;
+            const oss2024 = 834.4375;
+            const tss2025 = 474*1.45;
+            const oss2025 = 834.4375*1.45;
 			let grossSalary = bekoGrossSalary * 4 / 3;
 			let primCarpani = 0.0;
 			
@@ -184,8 +194,8 @@
 				primCarpani = primCarpaniTemp;
 			}
 
-			const tssPrice = 474;
-			const ossPrice = 834.4375;
+			const tssPrice = selectedYear === "2024" ? tss2024 : tss2025;
+			const ossPrice = selectedYear === "2024" ? oss2024 : oss2025;
             // Sabit kesinti oranları
             const sgkKesintiOrani = 0.14; // SGK İşçi Primi
             const prevSgkTavani = prevAsgariUcret * 7.5
@@ -198,7 +208,7 @@
                 saglikSigortasi = (ssSayisi - 1)*tssPrice
             }
             else {
-                saglikSigortasi = (ssSayisi > 2 ? (ssSayisi - 2)*ossPrice*0.4 + 2*ossPrice : ssSayisi*ossPrice) - tssPrice;
+                saglikSigortasi = (ssSayisi > 2 ? (ssSayisi - 2)*ossPrice*0.4 + 2*ossPrice : ssSayisi*ossPrice);
             }
 
             // Gelir vergisi dilimleri
@@ -361,9 +371,7 @@
 
             salaryTable.style.display = "table";
             document.getElementById('result').innerHTML = "Tablo oluşturuldu.";
-			
-			// TODO List:
-			// 1- TSS/OSS seçtirme ve bunların işlenmesi.
+
         }
     </script>
 </body>
