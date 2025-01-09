@@ -250,9 +250,6 @@
             salaryTableBody.innerHTML = ""; // Önce tabloyu temizle
 
             for (let ay = 1; ay <= 12; ay++) {
-				if (ay == 12) {
-					grossSalary += bekoGrossSalary * primCarpani;
-				}
 
                 if (grossSalary >= sgkTavani) {
                     devredenSgkMatrahNew = grossSalary - sgkTavani;
@@ -348,6 +345,86 @@
                 vakifCell.textContent = `${kocEmeklilikKesintisi.toFixed(2)}`;
                 besCell.textContent = `${besKesintisi.toFixed(2)}`;
                 ssCell.textContent = `${saglikSigortasi.toFixed(2)}`;
+                netPayCell.textContent = `${netOdeme.toFixed(2)}`;
+                rdPaybackCell.textContent = `+ ${damgaVergisi.toFixed(2)}`;
+
+                row.appendChild(monthCell);
+                row.appendChild(netSalaryCell);
+                row.appendChild(vakifCell);
+                row.appendChild(besCell);
+                row.appendChild(ssCell);
+                row.appendChild(netPayCell);
+                row.appendChild(rdPaybackCell);
+                salaryTableBody.appendChild(row);
+            }
+
+            if (1) { // prim hesabı
+                grossSalary = bekoGrossSalary * primCarpani
+                if (sgkTabiUcret == sgkTavani) {
+                    sgkTabiUcret = 0;
+                }
+                else {
+                    if (grossSalary + sgkTabiUcret >= sgkTavani) {
+                        sgkTabiUcret = sgkTavani - sgkTabiUcret
+                    }
+                    else {
+                        sgkTabiUcret = grossSalary
+                    }
+                }
+
+				const sgkKesintisi = sgkTabiUcret * sgkKesintiOrani;
+				const issizlikKesintisi = sgkTabiUcret * issizlikSigortasiOrani;
+				const damgaVergisi = grossSalary * damgaVergisiOrani;
+				const kocEmeklilikKesintisi = 0;
+				const besKesintisi = sgkTabiUcret * besKatsayi;
+
+				const aylikGelirVergisiMatrahi = grossSalary - (sgkKesintisi + issizlikKesintisi);
+				
+                toplamMatrah += aylikGelirVergisiMatrahi;
+
+                let kalanGelir = toplamMatrah;
+                let kumuleGelirVergisi = 0.0;
+
+                for (let i = 0; i < gelirVergisiDilimleri.length; i++) {
+                    const { limit, rate } = gelirVergisiDilimleri[i];
+                    const oncekiLimit = i > 0 ? gelirVergisiDilimleri[i - 1].limit : 0;
+
+                    if (kalanGelir > 0) {
+                        const dilimGeliri = Math.min(kalanGelir, limit - oncekiLimit);
+                        kumuleGelirVergisi += dilimGeliri * rate;
+                        kalanGelir -= dilimGeliri;
+                    } else {
+                        break;
+                    }
+                }
+
+                const netSalary = grossSalary - (sgkKesintisi + issizlikKesintisi + (kumuleGelirVergisi - oncekiKumuleGelirVergisi) + damgaVergisi);
+				const netOdeme = netSalary - (kocEmeklilikKesintisi + besKesintisi)
+				
+				let aylikGelirVergisi = kumuleGelirVergisi - oncekiKumuleGelirVergisi;
+				oncekiKumuleGelirVergisi = kumuleGelirVergisi;
+
+                totalNet += netSalary;
+                totalVakif += kocEmeklilikKesintisi;
+                totalBes += besKesintisi;
+                totalSS += 0;
+                totalNetOdeme += netOdeme;
+				totalRdPayback += damgaVergisi
+
+                const row = document.createElement('tr');
+                const monthCell = document.createElement('td');
+                const netSalaryCell = document.createElement('td');
+                const vakifCell = document.createElement('td');
+                const besCell = document.createElement('td');
+                const ssCell = document.createElement('td');
+                const netPayCell = document.createElement('td');
+                const rdPaybackCell = document.createElement('td');
+
+                monthCell.textContent = `Performans Primi`;
+                netSalaryCell.textContent = `${netSalary.toFixed(2)}`;
+                vakifCell.textContent = `${kocEmeklilikKesintisi.toFixed(2)}`;
+                besCell.textContent = `${besKesintisi.toFixed(2)}`;
+                ssCell.textContent = `-`;
                 netPayCell.textContent = `${netOdeme.toFixed(2)}`;
                 rdPaybackCell.textContent = `+ ${damgaVergisi.toFixed(2)}`;
 
