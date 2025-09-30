@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/calculate.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
+}
