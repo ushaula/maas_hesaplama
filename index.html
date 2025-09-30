@@ -246,6 +246,9 @@
 <body>
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
+        <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
+            📅 Versiyon: 2.1.0 | Son Güncelleme: 30 Eylül 2025
+        </div>
         <div class="inline-inputs">
             <div>
 				<label for="year">Yıl </label>
@@ -414,106 +417,199 @@
             showSuccess('Hesaplama tamamlandı! 🎉');
         }
 
-        // Ana hesaplama fonksiyonu - artık API'yi kullanıyor
-        async function calculateYearlyNetSalaries() {
+        // Ana hesaplama fonksiyonu - Versiyon 2.1.0 Local Hesaplama Modu
+        function calculateYearlyNetSalaries() {
             try {
                 showLoading(true);
                 
                 // Form verilerini topla
-                const requestData = {
-                    bekoGrossSalary: parseFloat(document.getElementById('grossSalary').value),
-                    lastGrossSalary: parseFloat(document.getElementById('lastGrossSalary').value) || 0,
-                    primCarpani: parseFloat(document.getElementById('ikramiyeKatsayi').value) || 0,
-                    selectedYear: document.getElementById('year').value,
-                    besStatus: document.getElementById('besOption').value,
-                    ssTipi: document.getElementById('sigortaTipi').value,
-                    ssSayisi: parseInt(document.getElementById('sigortaSayısı').value)
-                };
+                const bekoGrossSalary = parseFloat(document.getElementById('grossSalary').value);
+                const lastGrossSalary = parseFloat(document.getElementById('lastGrossSalary').value) || 0;
+                const primCarpani = parseFloat(document.getElementById('ikramiyeKatsayi').value) || 0;
+                const selectedYear = document.getElementById('year').value;
+                const besStatus = document.getElementById('besOption').value;
+                const ssTipi = document.getElementById('sigortaTipi').value;
+                const ssSayisi = parseInt(document.getElementById('sigortaSayısı').value);
 
                 // Input validasyonu
-                if (!requestData.bekoGrossSalary || requestData.bekoGrossSalary <= 0) {
+                if (!bekoGrossSalary || bekoGrossSalary <= 0) {
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                // API'ye istek gönder
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
+                console.log('🔧 Versiyon 2.1.0 - Local hesaplama modu çalışıyor');
+                
+                // Hesaplama yap
+                performDetailedCalculation({
+                    bekoGrossSalary,
+                    lastGrossSalary,
+                    primCarpani,
+                    selectedYear,
+                    besStatus,
+                    ssTipi,
+                    ssSayisi
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'API isteği başarısız oldu');
-                }
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateTable(result.data);
-                } else {
-                    throw new Error(result.error || 'Hesaplama başarısız oldu');
-                }
-
             } catch (error) {
-                console.error('API Error:', error);
-                
-                // Her durumda fallback hesaplama kullan
-                console.warn('API kullanılamıyor, fallback hesaplama yapılıyor...');
-                showError('⚠️ Sunucu ile bağlantı kurulamadı. Hesaplama local olarak yapılıyor...');
-                
-                // Fallback: Local hesaplama
-                setTimeout(() => {
-                    try {
-                        performLocalCalculation(requestData);
-                    } catch (localError) {
-                        showError('Hesaplama yapılamadı: ' + localError.message);
-                    }
-                }, 1000);
+                console.error('Calculation Error:', error);
+                showError('Hata: ' + error.message);
             } finally {
                 showLoading(false);
             }
         }
 
-        // Basit fallback hesaplama (API çalışmazsa)
-        function performLocalCalculation(data) {
-            const { bekoGrossSalary, selectedYear, besStatus, ssTipi, ssSayisi } = data;
+        // Detaylı hesaplama fonksiyonu - Versiyon 2.1.0
+        function performDetailedCalculation(data) {
+            const { bekoGrossSalary, lastGrossSalary, primCarpani, selectedYear, besStatus, ssTipi, ssSayisi } = data;
             
-            // Basit hesaplama (tam formül olmasa da çalışır)
-            const grossSalary = bekoGrossSalary * 4/3;
-            const monthlyNet = grossSalary * 0.73; // Yaklaşık net hesaplama
-            const yearlyNet = monthlyNet * 12;
+            // Sabitler
+            const constants = {
+                grossMultiplier: 4/3,
+                sgkRate: 0.14,
+                unemploymentRate: 0.01,
+                stampTaxRate: 0.00759,
+                kocPensionRate: 0.06,
+                besRate: besStatus === 'var' ? 0.03 : 0,
+                minWages: {
+                    '2024': 20002.5,
+                    '2025': 26005.5
+                },
+                healthInsurance: {
+                    tss: selectedYear === '2024' ? 474 : 844.5,
+                    oss: selectedYear === '2024' ? 834.4375 : 1335.1
+                },
+                taxBrackets: selectedYear === '2024' ? [
+                    { limit: 110000, rate: 0.15 },
+                    { limit: 230000, rate: 0.20 },
+                    { limit: 870000, rate: 0.27 },
+                    { limit: 3000000, rate: 0.35 },
+                    { limit: Infinity, rate: 0.40 }
+                ] : [
+                    { limit: 158000, rate: 0.15 },
+                    { limit: 330000, rate: 0.20 },
+                    { limit: 1200000, rate: 0.27 },
+                    { limit: 4300000, rate: 0.35 },
+                    { limit: Infinity, rate: 0.40 }
+                ]
+            };
             
-            // Basit tablo oluştur
+            const grossSalary = bekoGrossSalary * constants.grossMultiplier;
+            const minWage = constants.minWages[selectedYear];
+            const sgkCeiling = minWage * 7.5;
+            
+            // Sağlık sigortası hesaplama
+            const healthInsurance = ssTipi === 'tss' 
+                ? (ssSayisi - 1) * constants.healthInsurance.tss
+                : (ssSayisi > 2 
+                    ? (ssSayisi - 2) * constants.healthInsurance.oss * 0.4 + 2 * constants.healthInsurance.oss 
+                    : ssSayisi * constants.healthInsurance.oss);
+            
             const monthlyResults = [];
-            for (let i = 1; i <= 12; i++) {
+            let totalMatrah = 0;
+            let previousCumulativeTax = 0;
+            let totalNet = 0, totalVakif = 0, totalBes = 0, totalSS = 0, totalNetOdeme = 0, totalRdPayback = 0;
+            
+            // 12 ay hesaplama
+            for (let month = 1; month <= 12; month++) {
+                const sgkTaxable = Math.min(grossSalary, sgkCeiling);
+                const sgkDeduction = sgkTaxable * constants.sgkRate;
+                const unemploymentDeduction = sgkTaxable * constants.unemploymentRate;
+                const stampTax = (grossSalary + constants.healthInsurance.tss - minWage) * constants.stampTaxRate;
+                const kocPension = bekoGrossSalary * constants.kocPensionRate;
+                const besDeduction = sgkTaxable * constants.besRate;
+                
+                // Gelir vergisi matrahı
+                const incomeMatrah = grossSalary - sgkDeduction - unemploymentDeduction + constants.stampTaxRate * constants.healthInsurance.tss - healthInsurance;
+                totalMatrah += incomeMatrah;
+                
+                // Gelir vergisi hesaplama
+                let cumulativeTax = 0;
+                let remainingIncome = totalMatrah;
+                
+                for (let bracket of constants.taxBrackets) {
+                    if (remainingIncome <= 0) break;
+                    const prevLimit = constants.taxBrackets.indexOf(bracket) > 0 
+                        ? constants.taxBrackets[constants.taxBrackets.indexOf(bracket) - 1].limit 
+                        : 0;
+                    const taxableAmount = Math.min(remainingIncome, bracket.limit - prevLimit);
+                    cumulativeTax += taxableAmount * bracket.rate;
+                    remainingIncome -= taxableAmount;
+                }
+                
+                // Asgari ücret vergisi (muafiyet)
+                const minWageMatrah = month * minWage * (1 - constants.sgkRate - constants.unemploymentRate);
+                let minWageTax = 0;
+                let remainingMinWage = minWageMatrah;
+                
+                for (let bracket of constants.taxBrackets) {
+                    if (remainingMinWage <= 0) break;
+                    const prevLimit = constants.taxBrackets.indexOf(bracket) > 0 
+                        ? constants.taxBrackets[constants.taxBrackets.indexOf(bracket) - 1].limit 
+                        : 0;
+                    const taxableAmount = Math.min(remainingMinWage, bracket.limit - prevLimit);
+                    minWageTax += taxableAmount * bracket.rate;
+                    remainingMinWage -= taxableAmount;
+                }
+                
+                const monthlyTax = cumulativeTax - previousCumulativeTax;
+                const netSalary = grossSalary - sgkDeduction - unemploymentDeduction - monthlyTax + (minWageTax - (month > 1 ? 0 : 0)) - stampTax + constants.stampTaxRate * constants.healthInsurance.tss;
+                const netPayment = netSalary - kocPension - besDeduction - healthInsurance;
+                
+                previousCumulativeTax = cumulativeTax;
+                
+                // Toplamları güncelle
+                totalNet += netSalary;
+                totalVakif += kocPension;
+                totalBes += besDeduction;
+                totalSS += healthInsurance;
+                totalNetOdeme += netPayment;
+                totalRdPayback += stampTax;
+                
                 monthlyResults.push({
-                    month: `${i}. Ay`,
-                    netSalary: monthlyNet,
-                    kocPension: bekoGrossSalary * 0.06,
-                    bes: besStatus === 'var' ? grossSalary * 0.03 : 0,
-                    healthInsurance: ssTipi === 'tss' ? (ssSayisi - 1) * 500 : ssSayisi * 800,
-                    netPayment: monthlyNet - (bekoGrossSalary * 0.06),
-                    stampTax: grossSalary * 0.00759
+                    month: `${month}. Ay`,
+                    netSalary: netSalary,
+                    kocPension: kocPension,
+                    bes: besDeduction,
+                    healthInsurance: healthInsurance,
+                    netPayment: netPayment,
+                    stampTax: stampTax
                 });
             }
             
-            const mockData = {
+            // Performans primi
+            if (primCarpani > 0) {
+                const bonusGross = bekoGrossSalary * primCarpani;
+                const bonusNet = bonusGross * 0.75; // Yaklaşık
+                const bonusStampTax = bonusGross * constants.stampTaxRate;
+                
+                totalNet += bonusNet;
+                totalRdPayback += bonusStampTax;
+                totalNetOdeme += bonusNet;
+                
+                monthlyResults.push({
+                    month: 'Performans Primi',
+                    netSalary: bonusNet,
+                    kocPension: 0,
+                    bes: 0,
+                    healthInsurance: 0,
+                    netPayment: bonusNet,
+                    stampTax: bonusStampTax
+                });
+            }
+            
+            const result = {
                 monthlyResults,
                 totals: {
-                    totalNet: Math.round(yearlyNet),
-                    totalVakif: Math.round(bekoGrossSalary * 0.06 * 12),
-                    totalBes: besStatus === 'var' ? Math.round(grossSalary * 0.03 * 12) : 0,
-                    totalSS: Math.round((ssTipi === 'tss' ? (ssSayisi - 1) * 500 : ssSayisi * 800) * 12),
-                    totalNetOdeme: Math.round(yearlyNet - (bekoGrossSalary * 0.06 * 12)),
-                    totalRdPayback: Math.round(grossSalary * 0.00759 * 12)
+                    totalNet: Math.round(totalNet),
+                    totalVakif: Math.round(totalVakif),
+                    totalBes: Math.round(totalBes),
+                    totalSS: Math.round(totalSS),
+                    totalNetOdeme: Math.round(totalNetOdeme),
+                    totalRdPayback: Math.round(totalRdPayback)
                 }
             };
             
-            updateTable(mockData);
-            showSuccess('⚠️ Basit hesaplama tamamlandı (API bağlantısı yok)');
+            updateTable(result);
+            showSuccess('✅ Hesaplama tamamlandı! (Versiyon 2.1.0)');
         }
 
         // Geliştirme modunda local test için fallback
