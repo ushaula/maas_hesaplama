@@ -333,8 +333,8 @@
     </div>
 
     <script>
-        // API URL - deployment sonrası güncellenecek
-        const API_URL = '/api/calculate'; // Vercel otomatik routing
+        // Güvenlik için kod obfuscation yapılmış hesaplama fonksiyonları
+        const API_URL = '/api/calculate'; // Kullanılmıyor artık, local hesaplama
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -460,22 +460,18 @@
             } catch (error) {
                 console.error('API Error:', error);
                 
-                // API hatası varsa fallback hesaplama kullan
-                if (error.message.includes('Unexpected token') || error.message.includes('fetch')) {
-                    console.warn('API kullanılamıyor, fallback hesaplama yapılıyor...');
-                    showError('⚠️ Sunucu ile bağlantı kurulamadı. Hesaplama local olarak yapılıyor...');
-                    
-                    // Fallback: Local hesaplama (geçici)
-                    setTimeout(() => {
-                        try {
-                            performLocalCalculation(requestData);
-                        } catch (localError) {
-                            showError('Hesaplama yapılamadı: ' + localError.message);
-                        }
-                    }, 1000);
-                } else {
-                    showError(error.message);
-                }
+                // Her durumda fallback hesaplama kullan
+                console.warn('API kullanılamıyor, fallback hesaplama yapılıyor...');
+                showError('⚠️ Sunucu ile bağlantı kurulamadı. Hesaplama local olarak yapılıyor...');
+                
+                // Fallback: Local hesaplama
+                setTimeout(() => {
+                    try {
+                        performLocalCalculation(requestData);
+                    } catch (localError) {
+                        showError('Hesaplama yapılamadı: ' + localError.message);
+                    }
+                }, 1000);
             } finally {
                 showLoading(false);
             }
