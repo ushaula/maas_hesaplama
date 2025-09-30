@@ -458,17 +458,66 @@
                 }
 
             } catch (error) {
-                console.error('Calculation error:', error);
+                console.error('API Error:', error);
                 
-                // Network hatası kontrolü
-                if (error.message.includes('fetch')) {
-                    showError('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.');
+                // API hatası varsa fallback hesaplama kullan
+                if (error.message.includes('Unexpected token') || error.message.includes('fetch')) {
+                    console.warn('API kullanılamıyor, fallback hesaplama yapılıyor...');
+                    showError('⚠️ Sunucu ile bağlantı kurulamadı. Hesaplama local olarak yapılıyor...');
+                    
+                    // Fallback: Local hesaplama (geçici)
+                    setTimeout(() => {
+                        try {
+                            performLocalCalculation(requestData);
+                        } catch (localError) {
+                            showError('Hesaplama yapılamadı: ' + localError.message);
+                        }
+                    }, 1000);
                 } else {
                     showError(error.message);
                 }
             } finally {
                 showLoading(false);
             }
+        }
+
+        // Basit fallback hesaplama (API çalışmazsa)
+        function performLocalCalculation(data) {
+            const { bekoGrossSalary, selectedYear, besStatus, ssTipi, ssSayisi } = data;
+            
+            // Basit hesaplama (tam formül olmasa da çalışır)
+            const grossSalary = bekoGrossSalary * 4/3;
+            const monthlyNet = grossSalary * 0.73; // Yaklaşık net hesaplama
+            const yearlyNet = monthlyNet * 12;
+            
+            // Basit tablo oluştur
+            const monthlyResults = [];
+            for (let i = 1; i <= 12; i++) {
+                monthlyResults.push({
+                    month: `${i}. Ay`,
+                    netSalary: monthlyNet,
+                    kocPension: bekoGrossSalary * 0.06,
+                    bes: besStatus === 'var' ? grossSalary * 0.03 : 0,
+                    healthInsurance: ssTipi === 'tss' ? (ssSayisi - 1) * 500 : ssSayisi * 800,
+                    netPayment: monthlyNet - (bekoGrossSalary * 0.06),
+                    stampTax: grossSalary * 0.00759
+                });
+            }
+            
+            const mockData = {
+                monthlyResults,
+                totals: {
+                    totalNet: Math.round(yearlyNet),
+                    totalVakif: Math.round(bekoGrossSalary * 0.06 * 12),
+                    totalBes: besStatus === 'var' ? Math.round(grossSalary * 0.03 * 12) : 0,
+                    totalSS: Math.round((ssTipi === 'tss' ? (ssSayisi - 1) * 500 : ssSayisi * 800) * 12),
+                    totalNetOdeme: Math.round(yearlyNet - (bekoGrossSalary * 0.06 * 12)),
+                    totalRdPayback: Math.round(grossSalary * 0.00759 * 12)
+                }
+            };
+            
+            updateTable(mockData);
+            showSuccess('⚠️ Basit hesaplama tamamlandı (API bağlantısı yok)');
         }
 
         // Geliştirme modunda local test için fallback

@@ -1,5 +1,5 @@
 // Vercel Serverless Function - Maaş Hesaplama API
-export default function handler(req, res) {
+module.exports = (req, res) => {
   // CORS headers (farklı domain'lerden erişim için)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -309,4 +309,4 @@ function calculateIncomeTax(totalMatrah, previousCumulativeTax, selectedYear, CO
     cumulativeTax,
     monthlyTax: cumulativeTax - previousCumulativeTax
   };
-}
+};

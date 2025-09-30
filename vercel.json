@@ -1,7 +1,14 @@
 {
+  "version": 2,
   "functions": {
     "api/calculate.js": {
       "runtime": "nodejs18.x"
     }
-  }
+  },
+  "routes": [
+    {
+      "src": "/api/calculate",
+      "dest": "/api/calculate.js"
+    }
+  ]
 }
