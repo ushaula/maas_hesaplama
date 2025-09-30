@@ -247,7 +247,7 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📅 Versiyon: 2.1.0 | Son Güncelleme: 30 Eylül 2025
+            � Versiyon: 2.2.0 (Backend API) | Son Güncelleme: 30 Eylül 2025
         </div>
         <div class="inline-inputs">
             <div>
@@ -336,8 +336,17 @@
     </div>
 
     <script>
-        // Güvenlik için kod obfuscation yapılmış hesaplama fonksiyonları
-        const API_URL = '/api/calculate'; // Kullanılmıyor artık, local hesaplama
+        // Environment detection - Vercel vs GitHub Pages
+        const isVercel = window.location.hostname.includes('vercel.app');
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_URL = '/api/calculate'; // Vercel serverless function endpoint
+        
+        console.log('🌍 Environment:', {
+            hostname: window.location.hostname,
+            isVercel,
+            isLocal,
+            apiUrl: API_URL
+        });
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -417,41 +426,78 @@
             showSuccess('Hesaplama tamamlandı! 🎉');
         }
 
-        // Ana hesaplama fonksiyonu - Versiyon 2.1.0 Local Hesaplama Modu
-        function calculateYearlyNetSalaries() {
+        // Ana hesaplama fonksiyonu - Versiyon 2.2.0 Backend API Modu
+        async function calculateYearlyNetSalaries() {
             try {
                 showLoading(true);
                 
                 // Form verilerini topla
-                const bekoGrossSalary = parseFloat(document.getElementById('grossSalary').value);
-                const lastGrossSalary = parseFloat(document.getElementById('lastGrossSalary').value) || 0;
-                const primCarpani = parseFloat(document.getElementById('ikramiyeKatsayi').value) || 0;
-                const selectedYear = document.getElementById('year').value;
-                const besStatus = document.getElementById('besOption').value;
-                const ssTipi = document.getElementById('sigortaTipi').value;
-                const ssSayisi = parseInt(document.getElementById('sigortaSayısı').value);
+                const requestData = {
+                    bekoGrossSalary: parseFloat(document.getElementById('grossSalary').value),
+                    lastGrossSalary: parseFloat(document.getElementById('lastGrossSalary').value) || 0,
+                    primCarpani: parseFloat(document.getElementById('ikramiyeKatsayi').value) || 0,
+                    selectedYear: document.getElementById('year').value,
+                    besStatus: document.getElementById('besOption').value,
+                    ssTipi: document.getElementById('sigortaTipi').value,
+                    ssSayisi: parseInt(document.getElementById('sigortaSayısı').value)
+                };
 
                 // Input validasyonu
-                if (!bekoGrossSalary || bekoGrossSalary <= 0) {
+                if (!requestData.bekoGrossSalary || requestData.bekoGrossSalary <= 0) {
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('🔧 Versiyon 2.1.0 - Local hesaplama modu çalışıyor');
+                console.log('� Versiyon 2.2.0 - Backend API modu çalışıyor');
                 
-                // Hesaplama yap
-                performDetailedCalculation({
-                    bekoGrossSalary,
-                    lastGrossSalary,
-                    primCarpani,
-                    selectedYear,
-                    besStatus,
-                    ssTipi,
-                    ssSayisi
+                // API'ye istek gönder
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
                 });
 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Response:', errorText);
+                    
+                    // HTML response ise API çalışmıyor demektir
+                    if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
+                        throw new Error('API_NOT_AVAILABLE');
+                    }
+                    
+                    const errorData = JSON.parse(errorText);
+                    throw new Error(errorData.error || 'API isteği başarısız oldu');
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateTable(result.data);
+                    showSuccess('✅ Backend hesaplama tamamlandı! (Versiyon 2.2.0)');
+                } else {
+                    throw new Error(result.error || 'Hesaplama başarısız oldu');
+                }
+
             } catch (error) {
-                console.error('Calculation Error:', error);
-                showError('Hata: ' + error.message);
+                console.error('API Error:', error);
+                
+                // API çalışmıyorsa fallback kullan
+                if (error.message === 'API_NOT_AVAILABLE' || error.message.includes('fetch')) {
+                    console.warn('🔧 API kullanılamıyor, fallback hesaplama yapılıyor...');
+                    showError('⚠️ Backend API kullanılamıyor. Fallback hesaplama yapılıyor...');
+                    
+                    setTimeout(() => {
+                        try {
+                            performDetailedCalculation(requestData);
+                        } catch (localError) {
+                            showError('Hesaplama yapılamadı: ' + localError.message);
+                        }
+                    }, 1000);
+                } else {
+                    showError('Hata: ' + error.message);
+                }
             } finally {
                 showLoading(false);
             }
