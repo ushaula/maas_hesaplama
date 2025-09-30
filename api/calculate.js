@@ -1,5 +1,5 @@
 // Vercel Serverless Function - Maaş Hesaplama API
-module.exports = (req, res) => {
+export default async function handler(req, res) {
   // CORS headers (farklı domain'lerden erişim için)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -7,8 +7,7 @@ module.exports = (req, res) => {
 
   // OPTIONS request (CORS preflight)
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   // Sadece POST isteklerini kabul et
