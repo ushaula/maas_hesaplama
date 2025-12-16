@@ -247,7 +247,7 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            � Versiyon: 2.2.0 (Backend API) | Son Güncelleme: 30 Eylül 2025
+            📦 Versiyon: 2.3.0 (Standalone) | Son Güncelleme: 30 Eylül 2025
         </div>
         <div class="inline-inputs">
             <div>
@@ -336,17 +336,8 @@
     </div>
 
     <script>
-        // Environment detection - Vercel vs GitHub Pages
-        const isVercel = window.location.hostname.includes('vercel.app');
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_URL = '/api/calculate'; // Vercel serverless function endpoint
-        
-        console.log('🌍 Environment:', {
-            hostname: window.location.hostname,
-            isVercel,
-            isLocal,
-            apiUrl: API_URL
-        });
+        // Standalone mode - No API required
+        console.log('📦 Versiyon 2.3.0 - Standalone mode (API yok, tamamen local hesaplama)');
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -655,7 +646,7 @@
             };
             
             updateTable(result);
-            showSuccess('✅ Hesaplama tamamlandı! (Versiyon 2.1.0)');
+            showSuccess('✅ Hesaplama tamamlandı! (Standalone)');
         }
 
         // Geliştirme modunda local test için fallback
