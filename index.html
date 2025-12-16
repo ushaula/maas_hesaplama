@@ -247,7 +247,7 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📦 Versiyon: 2.3.0 (Standalone) | Son Güncelleme: 30 Eylül 2025
+            📦 Versiyon: 2.3.0 | Son Güncelleme: 30 Eylül 2025
         </div>
         <div class="inline-inputs">
             <div>
@@ -337,7 +337,7 @@
 
     <script>
         // Standalone mode - No API required
-        console.log('📦 Versiyon 2.3.0 - Standalone mode (API yok, tamamen local hesaplama)');
+        console.log('📦 Versiyon 2.3.0');
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -438,7 +438,7 @@
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('📦 Versiyon 2.3.0 - Standalone hesaplama başlıyor');
+                console.log('📦 Versiyon 2.3.0 - Hesaplama başlıyor');
                 
                 // Direkt hesaplama yap
                 performDetailedCalculation(requestData);
@@ -603,7 +603,7 @@
             };
             
             updateTable(result);
-            showSuccess('✅ Hesaplama tamamlandı! (Standalone)');
+            showSuccess('✅ Hesaplama tamamlandı!');
         }
 
         // Geliştirme modunda local test için fallback
