@@ -417,8 +417,8 @@
             showSuccess('Hesaplama tamamlandı! 🎉');
         }
 
-        // Ana hesaplama fonksiyonu - Versiyon 2.2.0 Backend API Modu
-        async function calculateYearlyNetSalaries() {
+        // Ana hesaplama fonksiyonu - Versiyon 2.3.0 Standalone Modu
+        function calculateYearlyNetSalaries() {
             try {
                 showLoading(true);
                 
@@ -438,57 +438,14 @@
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('� Versiyon 2.2.0 - Backend API modu çalışıyor');
+                console.log('📦 Versiyon 2.3.0 - Standalone hesaplama başlıyor');
                 
-                // API'ye istek gönder
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Response:', errorText);
-                    
-                    // HTML response ise API çalışmıyor demektir
-                    if (errorText.includes('<html') || errorText.includes('<!DOCTYPE')) {
-                        throw new Error('API_NOT_AVAILABLE');
-                    }
-                    
-                    const errorData = JSON.parse(errorText);
-                    throw new Error(errorData.error || 'API isteği başarısız oldu');
-                }
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateTable(result.data);
-                    showSuccess('✅ Backend hesaplama tamamlandı! (Versiyon 2.2.0)');
-                } else {
-                    throw new Error(result.error || 'Hesaplama başarısız oldu');
-                }
+                // Direkt hesaplama yap
+                performDetailedCalculation(requestData);
 
             } catch (error) {
-                console.error('API Error:', error);
-                
-                // API çalışmıyorsa fallback kullan
-                if (error.message === 'API_NOT_AVAILABLE' || error.message.includes('fetch')) {
-                    console.warn('🔧 API kullanılamıyor, fallback hesaplama yapılıyor...');
-                    showError('⚠️ Backend API kullanılamıyor. Fallback hesaplama yapılıyor...');
-                    
-                    setTimeout(() => {
-                        try {
-                            performDetailedCalculation(requestData);
-                        } catch (localError) {
-                            showError('Hesaplama yapılamadı: ' + localError.message);
-                        }
-                    }, 1000);
-                } else {
-                    showError('Hata: ' + error.message);
-                }
+                console.error('Hesaplama hatası:', error);
+                showError('Hata: ' + error.message);
             } finally {
                 showLoading(false);
             }
