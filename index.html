@@ -247,14 +247,14 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📦 Versiyon: 2.3.0 | Son Güncelleme: 30 Eylül 2025
+            📦 Versiyon: 2.4.0
         </div>
         <div class="inline-inputs">
             <div>
 				<label for="year">Yıl </label>
 				<select id="year">
-					<option value="2024">2024</option>
 					<option value="2025">2025</option>
+					<option value="2024">2024</option>
 				</select>
             </div>
             <div>
@@ -373,7 +373,7 @@
             const cells = [
                 monthText,
                 values.netSalary.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                values.kocPension.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                values.kocEmeklilik.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                 values.bes.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                 values.healthInsurance === 0 ? '-' : values.healthInsurance.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                 values.netPayment.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -461,9 +461,10 @@
                 sgkRate: 0.14,
                 unemploymentRate: 0.01,
                 stampTaxRate: 0.00759,
-                kocPensionRate: 0.06,
+                kocEmeklilikRate: 0.06,
                 besRate: besStatus === 'var' ? 0.03 : 0,
                 minWages: {
+                    '2023': 13414.5,
                     '2024': 20002.5,
                     '2025': 26005.5
                 },
@@ -488,7 +489,9 @@
             
             const grossSalary = bekoGrossSalary * constants.grossMultiplier;
             const minWage = constants.minWages[selectedYear];
-            const sgkCeiling = minWage * 7.5;
+            const prevYearMinWage = constants.minWages[String(Number(selectedYear) - 1)];
+            const sgkMaximum = minWage * 7.5;
+            const prevSgkTavani = minWage * 7.5;
             
             // Sağlık sigortası hesaplama
             const healthInsurance = ssTipi === 'tss' 
@@ -499,16 +502,42 @@
             
             const monthlyResults = [];
             let totalMatrah = 0;
+            let minWagePrevTax = 0.0;
+            let devredenSgkMatrahLast = lastGrossSalary > prevSgkTavani ? lastGrossSalary - prevSgkTavani : 0;
+            let devredenSgkMatrahPrev = 0;
+            let devredenSgkMatrahNew = 0;
+            let sgkTaxable = 0;
             let previousCumulativeTax = 0;
             let totalNet = 0, totalVakif = 0, totalBes = 0, totalSS = 0, totalNetOdeme = 0, totalRdPayback = 0;
             
             // 12 ay hesaplama
             for (let month = 1; month <= 12; month++) {
-                const sgkTaxable = Math.min(grossSalary, sgkCeiling);
+                const totalWithLast = grossSalary + devredenSgkMatrahLast;
+                const totalAll = grossSalary + devredenSgkMatrahPrev + devredenSgkMatrahLast;
+
+                if (grossSalary > sgkMaximum) {
+                    sgkTaxable = sgkMaximum;
+                    devredenSgkMatrahNew = grossSalary - sgkMaximum;
+                }
+                else {
+                    devredenSgkMatrahNew = 0;
+
+                    if (totalWithLast >= sgkMaximum) {
+                        sgkTaxable = sgkMaximum;
+                        devredenSgkMatrahLast = totalWithLast - sgkMaximum;
+                    }
+                    else {
+                        sgkTaxable = Math.min(totalAll, sgkMaximum);
+                        devredenSgkMatrahLast = 0;
+                    }
+                }
+                devredenSgkMatrahPrev = devredenSgkMatrahLast;
+                devredenSgkMatrahLast = devredenSgkMatrahNew;
+                //const sgkTaxable = Math.min(grossSalary, sgkMaximum);
                 const sgkDeduction = sgkTaxable * constants.sgkRate;
                 const unemploymentDeduction = sgkTaxable * constants.unemploymentRate;
                 const stampTax = (grossSalary + constants.healthInsurance.tss - minWage) * constants.stampTaxRate;
-                const kocPension = bekoGrossSalary * constants.kocPensionRate;
+                const kocEmeklilik = bekoGrossSalary * constants.kocEmeklilikRate;
                 const besDeduction = sgkTaxable * constants.besRate;
                 
                 // Gelir vergisi matrahı
@@ -531,7 +560,7 @@
                 
                 // Asgari ücret vergisi (muafiyet)
                 const minWageMatrah = month * minWage * (1 - constants.sgkRate - constants.unemploymentRate);
-                let minWageTax = 0;
+                let minWageCumulativeTax = 0;
                 let remainingMinWage = minWageMatrah;
                 
                 for (let bracket of constants.taxBrackets) {
@@ -540,19 +569,20 @@
                         ? constants.taxBrackets[constants.taxBrackets.indexOf(bracket) - 1].limit 
                         : 0;
                     const taxableAmount = Math.min(remainingMinWage, bracket.limit - prevLimit);
-                    minWageTax += taxableAmount * bracket.rate;
+                    minWageCumulativeTax += taxableAmount * bracket.rate;
                     remainingMinWage -= taxableAmount;
                 }
                 
                 const monthlyTax = cumulativeTax - previousCumulativeTax;
-                const netSalary = grossSalary - sgkDeduction - unemploymentDeduction - monthlyTax + (minWageTax - (month > 1 ? 0 : 0)) - stampTax + constants.stampTaxRate * constants.healthInsurance.tss;
-                const netPayment = netSalary - kocPension - besDeduction - healthInsurance;
+                const netSalary = grossSalary - sgkDeduction - unemploymentDeduction - monthlyTax + (minWageCumulativeTax - minWagePrevTax) - stampTax + constants.stampTaxRate * constants.healthInsurance.tss;
+                const netPayment = netSalary - kocEmeklilik - besDeduction - healthInsurance;
                 
                 previousCumulativeTax = cumulativeTax;
+                minWagePrevTax = minWageCumulativeTax;
                 
                 // Toplamları güncelle
                 totalNet += netSalary;
-                totalVakif += kocPension;
+                totalVakif += kocEmeklilik;
                 totalBes += besDeduction;
                 totalSS += healthInsurance;
                 totalNetOdeme += netPayment;
@@ -561,7 +591,7 @@
                 monthlyResults.push({
                     month: `${month}. Ay`,
                     netSalary: netSalary,
-                    kocPension: kocPension,
+                    kocEmeklilik: kocEmeklilik,
                     bes: besDeduction,
                     healthInsurance: healthInsurance,
                     netPayment: netPayment,
@@ -582,7 +612,7 @@
                 monthlyResults.push({
                     month: 'Performans Primi',
                     netSalary: bonusNet,
-                    kocPension: 0,
+                    kocEmeklilik: 0,
                     bes: 0,
                     healthInsurance: 0,
                     netPayment: bonusNet,
