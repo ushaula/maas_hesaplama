@@ -454,7 +454,35 @@
         // Detaylı hesaplama fonksiyonu - Versiyon 2.1.0
         function performDetailedCalculation(data) {
             const { bekoGrossSalary, lastGrossSalary, primCarpani, selectedYear, besStatus, ssTipi, ssSayisi } = data;
-            
+            const healthInsuranceByYear = {
+                    '2024': { tss: 474, oss: 834.4375 },
+                    '2025': { tss: 844.5, oss: 1335.1 },
+                    '2026': { tss: 1056, oss: 1669 }
+                };
+            const taxLimitsByYear = {
+                '2024': [
+                    { limit: 110000, rate: 0.15 },
+                    { limit: 230000, rate: 0.20 },
+                    { limit: 870000, rate: 0.27 },
+                    { limit: 3000000, rate: 0.35 },
+                    { limit: Infinity, rate: 0.40 }
+                ],
+                '2025': [
+                    { limit: 158000, rate: 0.15 },
+                    { limit: 330000, rate: 0.20 },
+                    { limit: 1200000, rate: 0.27 },
+                    { limit: 4300000, rate: 0.35 },
+                    { limit: Infinity, rate: 0.40 }
+                ],
+                '2026': [
+                    { limit: 200000, rate: 0.15 },
+                    { limit: 410000, rate: 0.20 },
+                    { limit: 1500000, rate: 0.27 },
+                    { limit: 5400000, rate: 0.35 },
+                    { limit: Infinity, rate: 0.40 }
+                ]
+            };
+
             // Sabitler
             const constants = {
                 grossMultiplier: 4/3,
@@ -466,32 +494,24 @@
                 minWages: {
                     '2023': 13414.5,
                     '2024': 20002.5,
-                    '2025': 26005.5
+                    '2025': 26005.5,
+                    '2026': 32007.0
                 },
-                healthInsurance: {
-                    tss: selectedYear === '2024' ? 474 : 844.5,
-                    oss: selectedYear === '2024' ? 834.4375 : 1335.1
+                sgkTavanRates: {
+                    '2023': 7.5,
+                    '2024': 7.5,
+                    '2025': 7.5,
+                    '2026': 9.0
                 },
-                taxBrackets: selectedYear === '2024' ? [
-                    { limit: 110000, rate: 0.15 },
-                    { limit: 230000, rate: 0.20 },
-                    { limit: 870000, rate: 0.27 },
-                    { limit: 3000000, rate: 0.35 },
-                    { limit: Infinity, rate: 0.40 }
-                ] : [
-                    { limit: 158000, rate: 0.15 },
-                    { limit: 330000, rate: 0.20 },
-                    { limit: 1200000, rate: 0.27 },
-                    { limit: 4300000, rate: 0.35 },
-                    { limit: Infinity, rate: 0.40 }
-                ]
+                healthInsurance: healthInsuranceByYear[selectedYear],
+                taxBrackets: taxLimitsByYear[selectedYear]
             };
             
             const grossSalary = bekoGrossSalary * constants.grossMultiplier;
             const minWage = constants.minWages[selectedYear];
             const prevYearMinWage = constants.minWages[String(Number(selectedYear) - 1)];
-            const sgkMaximum = minWage * 7.5;
-            const prevSgkTavani = minWage * 7.5;
+            const sgkMaximum = minWage * constants.sgkTavanRates[selectedYear];
+            const prevSgkTavani = minWage * constants.sgkTavanRates[String(Number(selectedYear) - 1)];
             
             // Sağlık sigortası hesaplama
             const healthInsurance = ssTipi === 'tss' 
