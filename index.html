@@ -247,12 +247,13 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📦 Versiyon: 2.4.0
+            📦 Versiyon: 2.4.1 - 2026 Yılı Sağlık Sigortası Tutarları Henüz Açıklanmadığı İçin Hesaplar Tahmini Değerlere Göre Yapılmaktadır
         </div>
         <div class="inline-inputs">
             <div>
 				<label for="year">Yıl </label>
 				<select id="year">
+					<option value="2026">2026</option>
 					<option value="2025">2025</option>
 					<option value="2024">2024</option>
 				</select>
@@ -337,7 +338,7 @@
 
     <script>
         // Standalone mode - No API required
-        console.log('📦 Versiyon 2.3.0');
+        console.log('📦 Versiyon 2.4.1');
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -438,7 +439,7 @@
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('📦 Versiyon 2.3.0 - Hesaplama başlıyor');
+                console.log('📦 Versiyon 2.4.1 - Hesaplama başlıyor');
                 
                 // Direkt hesaplama yap
                 performDetailedCalculation(requestData);
@@ -457,7 +458,7 @@
             const healthInsuranceByYear = {
                     '2024': { tss: 474, oss: 834.4375 },
                     '2025': { tss: 844.5, oss: 1335.1 },
-                    '2026': { tss: 1056, oss: 1669 }
+                    '2026': { tss: 1100, oss: 1736 }
                 };
             const taxLimitsByYear = {
                 '2024': [
@@ -475,10 +476,10 @@
                     { limit: Infinity, rate: 0.40 }
                 ],
                 '2026': [
-                    { limit: 200000, rate: 0.15 },
-                    { limit: 410000, rate: 0.20 },
+                    { limit: 190000, rate: 0.15 },
+                    { limit: 400000, rate: 0.20 },
                     { limit: 1500000, rate: 0.27 },
-                    { limit: 5400000, rate: 0.35 },
+                    { limit: 5300000, rate: 0.35 },
                     { limit: Infinity, rate: 0.40 }
                 ]
             };
@@ -495,7 +496,7 @@
                     '2023': 13414.5,
                     '2024': 20002.5,
                     '2025': 26005.5,
-                    '2026': 32007.0
+                    '2026': 30030.0
                 },
                 sgkTavanRates: {
                     '2023': 7.5,
