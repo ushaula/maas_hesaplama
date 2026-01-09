@@ -247,7 +247,7 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📦 Versiyon: 2.4.2 - 2026 Yılı Sağlık Sigortası Tutarları Henüz Açıklanmadığı İçin Hesaplar Tahmini Değerlere Göre Yapılmaktadır
+            📦 Versiyon: 2.4.3 - 2026 Yılı Sağlık Sigortası Tutarları Henüz Açıklanmadığı İçin Hesaplar Tahmini Değerlere Göre Yapılmaktadır
         </div>
         <div class="inline-inputs">
             <div>
@@ -338,7 +338,7 @@
 
     <script>
         // Standalone mode - No API required
-        console.log('📦 Versiyon 2.4.2');
+        console.log('📦 Versiyon 2.4.3');
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -439,7 +439,7 @@
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('📦 Versiyon 2.4.2 - Hesaplama başlıyor');
+                console.log('📦 Versiyon 2.4.3 - Hesaplama başlıyor');
                 
                 // Direkt hesaplama yap
                 performDetailedCalculation(requestData);
@@ -622,19 +622,60 @@
             
             // Performans primi
             if (primCarpani > 0) {
-                const bonusGross = bekoGrossSalary * primCarpani;
-                const bonusNet = bonusGross * 0.75; // Yaklaşık
-                const bonusStampTax = bonusGross * constants.stampTaxRate;
-                
-                totalNet += bonusNet;
-                totalRdPayback += bonusStampTax;
+                let bonusGross = bekoGrossSalary * primCarpani
+                if (sgkTaxable == sgkMaximum) {
+                    sgkTaxable = 0;
+                }
+                else {
+                    if (bonusGross + sgkTaxable >= sgkMaximum) {
+                        sgkTaxable = sgkMaximum - sgkTaxable
+                    }
+                    else {
+                        sgkTaxable = bonusGross
+                    }
+                }
+
+				const sgkKesintisi = sgkTaxable * constants.sgkRate;
+				const issizlikKesintisi = sgkTaxable * constants.unemploymentRate;
+				const bonusStampTax = bonusGross * constants.stampTaxRate;
+				const kocEmeklilikKesintisi = 0;
+				const besKesintisi = sgkTaxable * constants.besRate;
+
+				const aylikGelirVergisiMatrahi = bonusGross - (sgkKesintisi + issizlikKesintisi);
+				
+                totalMatrah += aylikGelirVergisiMatrahi;
+
+                let remainingIncome = totalMatrah;
+                let cumulativeTax = 0.0;
+
+                for (let bracket of constants.taxBrackets) {
+                    if (remainingIncome <= 0) break;
+                    const prevLimit = constants.taxBrackets.indexOf(bracket) > 0 
+                        ? constants.taxBrackets[constants.taxBrackets.indexOf(bracket) - 1].limit 
+                        : 0;
+                    const taxableAmount = Math.min(remainingIncome, bracket.limit - prevLimit);
+                    cumulativeTax += taxableAmount * bracket.rate;
+                    remainingIncome -= taxableAmount;
+                }
+
+                const netSalary = bonusGross - (sgkKesintisi + issizlikKesintisi + (cumulativeTax - previousCumulativeTax) + bonusStampTax);
+				const bonusNet = netSalary - (kocEmeklilikKesintisi + besKesintisi)
+				
+				let aylikGelirVergisi = cumulativeTax - previousCumulativeTax;
+				previousCumulativeTax = cumulativeTax;
+
+                totalNet += netSalary;
+                totalVakif += kocEmeklilikKesintisi;
+                totalBes += besKesintisi;
+                totalSS += 0;
                 totalNetOdeme += bonusNet;
+                totalRdPayback += bonusStampTax;
                 
                 monthlyResults.push({
                     month: 'Performans Primi',
-                    netSalary: bonusNet,
+                    netSalary: netSalary,
                     kocEmeklilik: 0,
-                    bes: 0,
+                    bes: besKesintisi,
                     healthInsurance: 0,
                     netPayment: bonusNet,
                     stampTax: bonusStampTax
