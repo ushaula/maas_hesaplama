@@ -247,7 +247,7 @@
     <div class="container">
         <h1>Özel Maaş Hesaplama</h1>
         <div style="text-align: center; margin-bottom: 15px; font-size: 0.85rem; color: #6c757d;">
-            📦 Versiyon: 2.4.3 - 2026 Yılı Sağlık Sigortası Tutarları Henüz Açıklanmadığı İçin Hesaplar Tahmini Değerlere Göre Yapılmaktadır
+            📦 Versiyon: 2.5
         </div>
         <div class="inline-inputs">
             <div>
@@ -338,7 +338,7 @@
 
     <script>
         // Standalone mode - No API required
-        console.log('📦 Versiyon 2.4.3');
+        console.log('📦 Versiyon 2.5');
 
         // Loading state gösterimi
         function showLoading(show) {
@@ -439,7 +439,7 @@
                     throw new Error('Lütfen geçerli bir brüt maaş giriniz');
                 }
 
-                console.log('📦 Versiyon 2.4.3 - Hesaplama başlıyor');
+                console.log('📦 Versiyon 2.5 - Hesaplama başlıyor');
                 
                 // Direkt hesaplama yap
                 performDetailedCalculation(requestData);
@@ -458,7 +458,7 @@
             const healthInsuranceByYear = {
                     '2024': { tss: 474, oss: 834.4375 },
                     '2025': { tss: 844.5, oss: 1335.1 },
-                    '2026': { tss: 1100, oss: 1736 }
+                    '2026': { tss: 1119, oss: 1797.88 }
                 };
             const taxLimitsByYear = {
                 '2024': [
